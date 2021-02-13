@@ -24,8 +24,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.microsoft.playwright.impl.Serialization.gson;
 
@@ -53,10 +54,10 @@ class Message {
 
 public class Connection {
   private final Transport transport;
-  private final Map<String, ChannelOwner> objects = new HashMap<>();
+  private final Map<String, ChannelOwner> objects = new ConcurrentHashMap<>();
   private final Root root;
-  private int lastId = 0;
-  private final Map<Integer, WaitableResult<JsonElement>> callbacks = new HashMap<>();
+  private final AtomicInteger lastId = new AtomicInteger();
+  private final Map<Integer, WaitableResult<JsonElement>> callbacks = new ConcurrentHashMap<>();
 
   class Root extends ChannelOwner {
     Root(Connection connection) {
@@ -82,7 +83,7 @@ public class Connection {
   }
 
   private WaitableResult<JsonElement> internalSendMessage(String guid, String method, JsonObject params) {
-    int id = ++lastId;
+    int id = lastId.getAndIncrement();
     WaitableResult<JsonElement> result = new WaitableResult<>();
     callbacks.put(id, result);
     JsonObject message = new JsonObject();
